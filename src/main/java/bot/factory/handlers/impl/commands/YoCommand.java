@@ -15,7 +15,7 @@ public class YoCommand implements Command {
 
     public static final String alias = "/yo ";
     private Update update;
-    private final List<String> listOfInterests = Arrays.asList("bar","walk","cinema","shopping","fun");
+    private final List<String> listOfInterests = Arrays.asList("bar","walk","music","cinema","shopping","fun","travel");
 
     YoCommand(Update update) {
         this.update = update;

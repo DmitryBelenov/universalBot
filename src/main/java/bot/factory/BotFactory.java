@@ -9,12 +9,17 @@ import bot.factory.handlers.interfaces.CommandFactory;
 import bot.factory.handlers.interfaces.Response;
 import bot.factory.handlers.interfaces.ResponseFactory;
 import com.google.common.base.Strings;
+import org.apache.log4j.Logger;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 import org.telegram.telegrambots.meta.api.objects.Location;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 public class BotFactory {
+
+    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location
+
+    private static Logger log = Logger.getLogger(BotFactory.class);
 
     private Update update;
 
@@ -34,7 +39,8 @@ public class BotFactory {
                     return command.invoke();
                 }
             } else {
-                ResponseFactory responseFactory = getResponse(text);
+//                ResponseFactory responseFactory = getResponse(text);
+                ResponseFactory responseFactory = getResponse(msg);
                 if (responseFactory != null) {
                     Response response = responseFactory.getFactory();
                     return response.invoke();
@@ -70,7 +76,8 @@ public class BotFactory {
         return null;
     }
 
-    private ResponseFactory getResponse(String text) {
+    private ResponseFactory getResponse(Message msg) {
+        log.info("text/smile - [id"+msg.getFrom().getId()+":"+msg.getFrom().getUserName()+", "+msg.getFrom().getFirstName()+" "+msg.getFrom().getLastName()+"]::["+msg.getText()+"]");
         return null;
     }
 
@@ -92,7 +99,7 @@ public class BotFactory {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "Ok, I'll send pizza to this location:)");
+        return (T) rm.fillMessage(update.getMessage(), "Ok, I'll send pizza to this location:)\uD83C\uDF55");
     }
 
     @SuppressWarnings("unchecked")
@@ -105,6 +112,6 @@ public class BotFactory {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "You want me to call "+contact.getFirstName()+"?\nJoke:)");
+        return (T) rm.fillMessage(update.getMessage(), "You want me to call "+contact.getFirstName()+"?\uD83D\uDE03");
     }
 }

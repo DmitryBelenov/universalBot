@@ -1,6 +1,9 @@
 package bot.factory.handlers.impl.commands;
 
+import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.interfaces.Command;
+import bot.utils.DBUtils;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 public class YoLookAroundCommand implements Command {
@@ -13,12 +16,28 @@ public class YoLookAroundCommand implements Command {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        return null;
+        String response;
+
+        Message message = update.getMessage();
+        Integer senderId = message.getFrom().getId();
+
+        response = nearbyCheck(senderId);
+
+        ResponseMessage rm = new ResponseMessage();
+        return (T) rm.fillMessage(update.getMessage(), response);
     }
 
     @Override
     public String getAlias() {
         return alias;
+    }
+
+    private String nearbyCheck(Integer senderId) {
+        DBUtils db = new DBUtils();
+        String res = db.nearbyCheckByYoCommand(senderId);
+        db.connectionClose();
+        return res;
     }
 }

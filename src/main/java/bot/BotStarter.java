@@ -1,6 +1,7 @@
 package bot;
 
 import bot.property.BotProperties;
+import bot.utils.SchedulesManager;
 import org.apache.log4j.Logger;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
@@ -18,6 +19,9 @@ public class BotStarter {
     public static void main(String[] args) {
         BotProperties properties = new BotProperties();
         if (properties.initialize()) {
+            SchedulesManager sm = new SchedulesManager();
+            sm.initYoDataCleaner();
+
             Frame f = new Frame();
             f.start();
         } else {
