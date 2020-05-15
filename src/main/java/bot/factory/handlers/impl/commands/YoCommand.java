@@ -24,7 +24,7 @@ public class YoCommand implements Command {
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        String response = "Cool! Now send me your contact";
+        String response = "YO! Now send me your contact \uD83D\uDC64\nInput Line->Attach->Contact->Your Contact";
 
         Message message = update.getMessage();
         String interests = message.getText().replace(YoCommand.alias, "").trim();
@@ -33,7 +33,7 @@ public class YoCommand implements Command {
         for (String interest : listOfInterests){
             sb.append(interest).append("\n");
         }
-        String incorrect = "Send me you'r interests correctly\n\nExample:\n\\yo bar,fun\n\n*****************\nInterest list here:\n"+sb.toString();
+        String incorrect = "Send me you'r interests correctly\n\nExample:\n/yo bar,fun\n\n*****************\nInterest list here:\n"+sb.toString();
         Integer userId = message.getFrom().getId();
         if (interests.trim().contains(",")){
             String[] iList = interests.split(",");
@@ -80,8 +80,13 @@ public class YoCommand implements Command {
         boolean changeState = true;
         int res = db.addUserYoFirstStage(userId, yoList);
 
-        if (res == 1)
-            response = "YO! I'm update your interests)\nSend me your contact";
+        if (res == 1){
+            response = "YO! I'm update your interests.";
+            YoStates state = AliasMapManager.yoStatesMap.get(userId);
+            if (YoStates.set_location.equals(state)){
+                response += "\nIf you need change Location, send me your contact again";
+            }
+        }
 
         if (res == -1) {
             response = "Hmm.. Looks like some problem\nTry again)";

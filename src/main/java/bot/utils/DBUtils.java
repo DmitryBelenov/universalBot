@@ -1,7 +1,10 @@
 package bot.utils;
 
+import bot.factory.handlers.impl.AliasMapManager;
 import bot.property.BotProperties;
 import org.apache.log4j.Logger;
+import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -128,7 +131,7 @@ public class DBUtils {
     }
 
     public String nearbyYoCheck(Integer userId, String lat, String lon) {
-        String result = "You say YO!\nNow I do not see anyone around with similar interests\nTry [\\yo] command without arguments later";
+        String result = "You say YO!\nNow I do not see anyone around with similar interests\nTry /yo command without arguments later";
 
         String myInterests = null;
         try {
@@ -168,7 +171,7 @@ public class DBUtils {
         }
 
         if (foundMyData) {
-            result = "Nobody around with interests " + myInterests + " yet:(\nTry to say YO! again later";
+            result = "Nobody around with interest '" + myInterests + "'\nTry to say YO! again later";
             result = nearbyCalculate(result, userId, latitude, longitude, myInterests);
         }
 
@@ -326,6 +329,7 @@ public class DBUtils {
             int i = 0;
             for (Integer id : idsToRemove) {
                 ids.append(id).append(i == idsToRemove.size() - 1 ? "" : ",");
+                AliasMapManager.yoStatesMap.remove(id);
                 i++;
             }
             String q = String.format(sqlQuery, ids.toString());
@@ -339,5 +343,150 @@ public class DBUtils {
             }
         }
         return true;
+    }
+
+    boolean checkMyWorldDataCleaner() {
+        ArrayList<Integer> idsToRemove = new ArrayList<>();
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("select user_id from my_world where (register_date + INTERVAL '1 HOUR') < NOW()");
+            while (rs.next()) {
+                idsToRemove.add(rs.getInt("user_id"));
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения просроченных YO записей: " + e);
+            return false;
+        }
+
+        if (idsToRemove.size() > 0) {
+            String sqlQuery = "delete from my_world where user_id in (%s)";
+            StringBuilder ids = new StringBuilder();
+            int i = 0;
+            for (Integer id : idsToRemove) {
+                ids.append(id).append(i == idsToRemove.size() - 1 ? "" : ",");
+                AliasMapManager.myWorldStatesMap.remove(id);
+                i++;
+            }
+            String q = String.format(sqlQuery, ids.toString());
+
+            try {
+                Statement s = connection.createStatement();
+                s.executeUpdate(q);
+            } catch (SQLException e) {
+                log.error("Ошибка удаления просроченных записей My World: " + e);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int checkMyWorldAvailability(Integer userId){
+        int res = -2;
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM my_world where user_id="+userId);
+            if (rs.next()){
+                res = -1;
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения записей пользователя My World: " + e);
+            return res;
+        }
+
+        if (res == -1) return res;
+
+        int count = 0;
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT COUNT(*) AS total FROM my_world");
+            if (rs.next()){
+                count = rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения количества записей My World: " + e);
+            return -2;
+        }
+
+        return count <= 100 ? 1 : 0;
+    }
+
+    public int createMyWorld(Integer userId, String picId){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("INSERT INTO my_world (register_id, user_id, user_pic_id, register_date, hide_contact) " +
+                    "VALUES ('" + UUID.randomUUID().toString() + "','" + userId + "','" + picId + "', current_timestamp, false)");
+        } catch (SQLException e) {
+            log.error("Ошибка создания записи My World: " + e);
+            return -1;
+        }
+        return 1;
+    }
+
+    public int addContactToMyWorld(Integer userId, String name, String phone){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("update my_world set user_name='" + name + "', user_phone='" + phone + "', register_date=current_timestamp  where user_id=" + userId);
+        } catch (SQLException e) {
+            log.error("Ошибка обновления записи My World: " + e);
+            return -1;
+        }
+        return 1;
+    }
+
+    public int addDescriptionToMyWorld(Integer userId, String description){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("update my_world set user_description='" + description + "', register_date=current_timestamp  where user_id=" + userId);
+        } catch (SQLException e) {
+            log.error("Ошибка обновления записи My World: " + e);
+            return -1;
+        }
+        return 1;
+    }
+
+    public int hideMyWorldContact(Integer userId){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("update my_world set hide_contact=true, register_date=current_timestamp  where user_id=" + userId);
+        } catch (SQLException e) {
+            log.error("Ошибка обновления записи My World: " + e);
+            return -1;
+        }
+        return 1;
+    }
+
+    public List<InputMedia> getMyWorlds(){
+        List<InputMedia> worlds = new ArrayList<>();
+
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT user_pic_id, user_name, user_phone, user_description, hide_contact FROM my_world where " +
+                    "user_name is not null and user_phone is not null and hide_contact is not null order by register_date");
+            while (rs.next()){
+                InputMediaPhoto photo = new InputMediaPhoto();
+
+                String picId = rs.getString("user_pic_id");
+                String userName = rs.getString("user_name");
+                photo.setMedia(picId);
+
+                String description = rs.getString("user_description");
+                if (description != null){
+                   userName += "\n"+description;
+                }
+
+                boolean hideContact = rs.getBoolean("hide_contact");
+                if (!hideContact){
+                   String phone = rs.getString("user_phone");
+                   userName += "\nContact: "+phone;
+                }
+
+                photo.setCaption(userName);
+                worlds.add(photo);
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения данных My World: " + e);
+        }
+
+        return worlds;
     }
 }

@@ -2,6 +2,7 @@ package bot.factory;
 
 import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.impl.AliasMapManager;
+import bot.factory.handlers.impl.MyWorldStates;
 import bot.factory.handlers.impl.YoStates;
 import bot.factory.handlers.impl.commands.*;
 import bot.factory.handlers.interfaces.Command;
@@ -10,14 +11,13 @@ import bot.factory.handlers.interfaces.Response;
 import bot.factory.handlers.interfaces.ResponseFactory;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
-import org.telegram.telegrambots.meta.api.objects.Contact;
-import org.telegram.telegrambots.meta.api.objects.Location;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.*;
+
+import java.util.List;
 
 public class BotFactory {
 
-    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location
+    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location 📱 - iphone 📷 - camera 🌄 - mountains pic 👤 - contact 🤖 - bot
 
     private static Logger log = Logger.getLogger(BotFactory.class);
 
@@ -39,7 +39,6 @@ public class BotFactory {
                     return command.invoke();
                 }
             } else {
-//                ResponseFactory responseFactory = getResponse(text);
                 ResponseFactory responseFactory = getResponse(msg);
                 if (responseFactory != null) {
                     Response response = responseFactory.getFactory();
@@ -50,12 +49,17 @@ public class BotFactory {
 
         Location location = msg.getLocation();
         if (location != null) {
-           return handleLocation(msg.getFrom().getId());
+            return handleLocation(msg.getFrom().getId());
         }
 
         Contact contact = msg.getContact();
-        if (contact != null){
-           return handleContact(msg.getFrom().getId(), contact);
+        if (contact != null) {
+            return handleContact(msg.getFrom().getId(), contact);
+        }
+
+        List<PhotoSize> photos = msg.getPhoto();
+        if (photos != null) {
+            return handlePicture(msg.getFrom().getId());
         }
 
         return null;
@@ -72,21 +76,34 @@ public class BotFactory {
             return new YoCommandFactory(update);
         } else if (text.startsWith(YoLookAroundCommand.alias)) {
             return new YoLookAroundCommandFactory(update);
+        } else if (text.startsWith(MyWorldCommand.alias)) {
+            return new MyWorldCommandFactory(update);
+        } else if (text.startsWith(MyWorldSetCommand.alias)) {
+            return new MyWorldSetCommandFactory(update);
         }
         return null;
     }
 
     private ResponseFactory getResponse(Message msg) {
-        log.info("text/smile - [id"+msg.getFrom().getId()+":"+msg.getFrom().getUserName()+", "+msg.getFrom().getFirstName()+" "+msg.getFrom().getLastName()+"]::["+msg.getText()+"]");
+        Integer userId = msg.getFrom().getId();
+
+        MyWorldStates state = AliasMapManager.myWorldStatesMap.get(userId);
+        if (state != null && state.equals(MyWorldStates.contact_sent)) {
+            return new MyWorldDescriptionResponseFactory(update);
+        } else if (state != null && state.equals(MyWorldStates.description_requested)) {
+            return new MyWorldHideContactResponseFactory(update);
+        }
+
+        log.info("text/smile - [id" + msg.getFrom().getId() + ":" + msg.getFrom().getUserName() + ", " + msg.getFrom().getFirstName() + " " + msg.getFrom().getLastName() + "]::[" + msg.getText() + "]");
         return null;
     }
 
     @SuppressWarnings("unchecked")
-    private <T>T handleLocation(Integer userId){
+    private <T> T handleLocation(Integer userId) {
         YoStates yoState = AliasMapManager.yoStatesMap.get(userId);
         String goToKey = AliasMapManager.locationKeysMap.get(userId);
 
-        if (yoState != null && yoState.equals(YoStates.set_contact_data) && goToKey == null){
+        if (yoState != null && yoState.equals(YoStates.set_contact_data) && goToKey == null) {
             CommandFactory commandFactory = new YoLocationCommandFactory(update);
             Command command = commandFactory.getFactory();
             return command.invoke();
@@ -103,15 +120,36 @@ public class BotFactory {
     }
 
     @SuppressWarnings("unchecked")
-    private <T>T handleContact(Integer userId, Contact contact){
+    private <T> T handleContact(Integer userId, Contact contact) {
         YoStates yoState = AliasMapManager.yoStatesMap.get(userId);
-        if (yoState != null && yoState.equals(YoStates.set_interest)){
+        if (yoState != null && yoState.equals(YoStates.set_interest)) {
             CommandFactory commandFactory = new YoContactCommandFactory(update);
+            Command command = commandFactory.getFactory();
+
+            return command.invoke();
+        }
+
+        MyWorldStates state = AliasMapManager.myWorldStatesMap.get(userId);
+        if (state != null && state.equals(MyWorldStates.picture_sent)) {
+            CommandFactory commandFactory = new MyWorldContactCommandFactory(update);
             Command command = commandFactory.getFactory();
             return command.invoke();
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "You want me to call "+contact.getFirstName()+"?\uD83D\uDE03");
+        return (T) rm.fillMessage(update.getMessage(), "You want me to call " + contact.getFirstName() + "?\uD83D\uDE03");
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T handlePicture(Integer userId) {
+        MyWorldStates state = AliasMapManager.myWorldStatesMap.get(userId);
+        if (state != null && state.equals(MyWorldStates.my_world_requested)) {
+            CommandFactory commandFactory = new MyWorldPictureCommandFactory(update);
+            Command command = commandFactory.getFactory();
+            return command.invoke();
+        }
+
+        ResponseMessage rm = new ResponseMessage();
+        return (T) rm.fillMessage(update.getMessage(), "Nice pic \uD83C\uDF04");
     }
 }

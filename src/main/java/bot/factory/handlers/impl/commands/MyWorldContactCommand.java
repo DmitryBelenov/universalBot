@@ -2,55 +2,53 @@ package bot.factory.handlers.impl.commands;
 
 import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.impl.AliasMapManager;
-import bot.factory.handlers.impl.YoStates;
+import bot.factory.handlers.impl.MyWorldStates;
 import bot.factory.handlers.interfaces.Command;
 import bot.utils.DBUtils;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-public class YoContactCommand implements Command {
+public class MyWorldContactCommand implements Command {
 
     private Update update;
 
-    YoContactCommand(Update update) {
+    MyWorldContactCommand(Update update) {
         this.update = update;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        String response = "Nope) Send me YOUR contact\nStart over with the /yo command";
+        String response = "Nope) Send me YOUR contact\nStart over with the /set_my_world command";
 
         Message message = update.getMessage();
-        Integer senderId = message.getFrom().getId();
-
         Contact contact = message.getContact();
-        Integer contactId = contact.getUserID();
+
+        Integer userId = message.getFrom().getId();
+        Integer contact_userId = contact.getUserID();
 
         boolean keepState = true;
-        if (senderId.equals(contactId)){
+        if (userId.equals(contact_userId)) {
             String name = contact.getFirstName();
             String phone = contact.getPhoneNumber();
 
-            int res = setYoSecondData(senderId, name, phone);
+            int appendContact = addContactToMyWorldInfo(userId, name, phone);
 
-            if (res == 1) {
-                response = "Nice! Now send me your location";
-            }
-
-            if (res == -1){
-                response = "Hmm.. Looks like some problem\nTry again by /yo command";
+            if (appendContact == -1){
+                response = "Hmm.. Looks like some problem\nTry again by /set_my_world command";
                 keepState = false;
+            } else {
+                response = "OK, do you want attach description?\n- yes <your description>\n- no";
             }
         } else {
             keepState = false;
         }
 
         if (!keepState) {
-            AliasMapManager.yoStatesMap.remove(senderId);
+            AliasMapManager.myWorldStatesMap.remove(userId);
         } else {
-            AliasMapManager.yoStatesMap.put(senderId, YoStates.set_contact_data);
+            AliasMapManager.myWorldStatesMap.put(userId, MyWorldStates.contact_sent);
         }
         ResponseMessage rm = new ResponseMessage();
         return (T) rm.fillMessage(update.getMessage(), response);
@@ -61,9 +59,9 @@ public class YoContactCommand implements Command {
         return null;
     }
 
-    private int setYoSecondData(Integer userId, String name, String phone){
+    private int addContactToMyWorldInfo(Integer userId, String name, String phone){
         DBUtils db = new DBUtils();
-        int res = db.addUserYoSecondStage(userId, name, phone);
+        int res = db.addContactToMyWorld(userId, name, phone);
         db.connectionClose();
         return res;
     }

@@ -37,7 +37,7 @@ public class YoLocationCommand implements Command {
             response = nearbyCheck(senderId, lat, lon);
             return (T) rm.fillMessage(update.getMessage(), response);
         } else {
-            response = "Hmm.. Looks like some problem\nTry again by \\yo command";
+            response = "Hmm.. Looks like some problem\nTry again by /yo command";
             AliasMapManager.yoStatesMap.remove(senderId);
             return (T) rm.fillMessage(update.getMessage(), response);
         }

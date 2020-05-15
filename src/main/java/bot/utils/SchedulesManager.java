@@ -14,7 +14,12 @@ public class SchedulesManager {
     public SchedulesManager() {
     }
 
-    public void initYoDataCleaner() {
+    public void init(){
+        initYoDataCleaner();
+        initMyWorldCleaner();
+    }
+
+    private void initYoDataCleaner() {
         final ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
         ses.scheduleWithFixedDelay(() -> {
                 CompletableFuture<Void> check = CompletableFuture.runAsync(() ->
@@ -30,5 +35,23 @@ public class SchedulesManager {
                     log.error("Expired YO task error:" + e);
                 }
         }, 0, 5, TimeUnit.MINUTES);
+    }
+
+    private void initMyWorldCleaner() {
+        final ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
+        ses.scheduleWithFixedDelay(() -> {
+            CompletableFuture<Void> check = CompletableFuture.runAsync(() ->
+            {
+                DBUtils dbUtils = new DBUtils();
+                boolean success = dbUtils.checkMyWorldDataCleaner();
+                if (!success) log.error("Expired My World task error");
+                dbUtils.connectionClose();
+            });
+            try {
+                check.get();
+            } catch (Exception e) {
+                log.error("Expired My World task error:" + e);
+            }
+        }, 0, 2, TimeUnit.MINUTES);
     }
 }

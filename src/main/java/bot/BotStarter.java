@@ -20,7 +20,7 @@ public class BotStarter {
         BotProperties properties = new BotProperties();
         if (properties.initialize()) {
             SchedulesManager sm = new SchedulesManager();
-            sm.initYoDataCleaner();
+            sm.init();
 
             Frame f = new Frame();
             f.start();

@@ -81,7 +81,12 @@ public class Bot extends TelegramLongPollingBot {
         } else if (t instanceof SendLocation) {
 
         } else if (t instanceof SendMediaGroup) {
-
+            SendMediaGroup mediaGroup = (SendMediaGroup) t;
+            try {
+                execute(mediaGroup);
+            } catch (TelegramApiException e) {
+                log.error("Unable to execute method Send Media Group\n"+e);
+            }
         }  else if (t instanceof SendPhoto) {
             SendPhoto photo = (SendPhoto) t;
             try {
