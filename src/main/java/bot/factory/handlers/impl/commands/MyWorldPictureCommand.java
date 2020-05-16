@@ -43,7 +43,7 @@ public class MyWorldPictureCommand implements Command {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), response);
+        return (T) rm.fillMessage(update.getMessage(), response, true);
     }
 
     @Override

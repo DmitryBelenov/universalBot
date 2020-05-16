@@ -38,7 +38,7 @@ public class GoToCommand implements Command {
         AliasMapManager.locationKeysMap.put(userId, target);
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "OK, now send me your Location \uD83D\uDCCD");
+        return (T) rm.fillMessage(update.getMessage(), "OK, send me your Location \uD83D\uDCCD", true);
     }
 
     @Override

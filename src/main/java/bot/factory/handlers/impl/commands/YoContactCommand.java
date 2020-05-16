@@ -53,7 +53,7 @@ public class YoContactCommand implements Command {
             AliasMapManager.yoStatesMap.put(senderId, YoStates.set_contact_data);
         }
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), response);
+        return (T) rm.fillMessage(update.getMessage(), response, true);
     }
 
     @Override

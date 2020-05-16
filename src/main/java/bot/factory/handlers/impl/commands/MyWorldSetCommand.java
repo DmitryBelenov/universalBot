@@ -13,31 +13,32 @@ public class MyWorldSetCommand implements Command {
     public static final String alias = "/set_my_world";
     private Update update;
 
-    public MyWorldSetCommand(Update update) {
+    MyWorldSetCommand(Update update) {
         this.update = update;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        Message message = update.getMessage();
+        Message message = update.getCallbackQuery().getMessage();
 
         String response = "Send me your world as one pic or selfie \uD83D\uDCF7";
 
-        int available = isNewRecordAvailable(message.getFrom().getId());
+        Integer from = update.getCallbackQuery().getFrom().getId();
+        int available = isNewRecordAvailable(from);
 
         if (available == 1) {
-            AliasMapManager.myWorldStatesMap.put(message.getFrom().getId(), MyWorldStates.my_world_requested);
+            AliasMapManager.myWorldStatesMap.put(from, MyWorldStates.my_world_requested);
         } else if (available == 0){
             response = "Image count limit exceeded\nTry to share your world later";
         } else if (available == -1){
-            response = "You already share your pic\uD83D\uDCF7\nSee it by /my_world command\nYou can share a new photo in an hour";
+            response = "You already share your pic\uD83D\uDCF7\nSee it by 'MW' button\nYou can share a new photo in an hour";
         } else {
             response = "Hmm.. Looks like some problem\nTry again later please";
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), response);
+        return (T) rm.fillMessage(message, response, true);
     }
 
     @Override

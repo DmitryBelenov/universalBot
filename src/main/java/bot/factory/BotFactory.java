@@ -13,6 +13,7 @@ import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.telegram.telegrambots.meta.api.objects.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class BotFactory {
@@ -28,40 +29,57 @@ public class BotFactory {
     }
 
     public <T> T getResponse() {
-        Message msg = update.getMessage();
+        if (update.hasMessage()) {
+            Message msg = update.getMessage();
+            String text = msg.getText();
 
-        String text = msg.getText();
-        if (!Strings.isNullOrEmpty(text)) {
-            if (text.startsWith("/")) {
-                CommandFactory commandFactory = getCommand(text);
-                if (commandFactory != null) {
-                    Command command = commandFactory.getFactory();
-                    return command.invoke();
+            if (!Strings.isNullOrEmpty(text)) {
+                if (text.startsWith("/") && !isStaticButton(text)) {
+                    CommandFactory commandFactory = getCommand(text);
+                    if (commandFactory != null) {
+                        Command command = commandFactory.getFactory();
+                        return command.invoke();
+                    }
+                } else {
+                    ResponseFactory responseFactory = getResponse(msg);
+                    if (responseFactory != null) {
+                        Response response = responseFactory.getFactory();
+                        return response.invoke();
+                    }
                 }
-            } else {
-                ResponseFactory responseFactory = getResponse(msg);
+            }
+
+            Location location = msg.getLocation();
+            if (location != null) {
+                return handleLocation(msg.getFrom().getId());
+            }
+
+            Contact contact = msg.getContact();
+            if (contact != null) {
+                return handleContact(msg.getFrom().getId(), contact);
+            }
+
+            List<PhotoSize> photos = msg.getPhoto();
+            if (photos != null) {
+                return handlePicture(msg.getFrom().getId());
+            }
+        } else if (update.hasCallbackQuery()) {
+            CallbackQuery cb = update.getCallbackQuery();
+            String data = cb.getData();
+            if (Arrays.asList("yes", "no").contains(cb.getData())) {
+                ResponseFactory responseFactory = getResponse(cb);
                 if (responseFactory != null) {
                     Response response = responseFactory.getFactory();
                     return response.invoke();
                 }
+            } else {
+                CommandFactory commandFactory = getCommand(data);
+                if (commandFactory != null) {
+                    Command command = commandFactory.getFactory();
+                    return command.invoke();
+                }
             }
         }
-
-        Location location = msg.getLocation();
-        if (location != null) {
-            return handleLocation(msg.getFrom().getId());
-        }
-
-        Contact contact = msg.getContact();
-        if (contact != null) {
-            return handleContact(msg.getFrom().getId(), contact);
-        }
-
-        List<PhotoSize> photos = msg.getPhoto();
-        if (photos != null) {
-            return handlePicture(msg.getFrom().getId());
-        }
-
         return null;
     }
 
@@ -74,27 +92,38 @@ public class BotFactory {
             return new GoToCommandFactory(update);
         } else if (text.startsWith(YoCommand.alias)) {
             return new YoCommandFactory(update);
-        } else if (text.startsWith(YoLookAroundCommand.alias)) {
+        } else if (text.equals(YoLookAroundCommand.alias)) {
             return new YoLookAroundCommandFactory(update);
-        } else if (text.startsWith(MyWorldCommand.alias)) {
+        } else if (text.equals(MyWorldCommand.alias)) {
             return new MyWorldCommandFactory(update);
-        } else if (text.startsWith(MyWorldSetCommand.alias)) {
+        } else if (text.equals(MyWorldSetCommand.alias)) {
             return new MyWorldSetCommandFactory(update);
+        } else if (text.equals(StartCommand.alias)) {
+            return new StartCommandFactory(update);
         }
         return null;
     }
 
-    private ResponseFactory getResponse(Message msg) {
-        Integer userId = msg.getFrom().getId();
+    private ResponseFactory getResponse(CallbackQuery callbackQuery) {
+        Integer userId = callbackQuery.getFrom().getId();
+
+        MyWorldStates state = AliasMapManager.myWorldStatesMap.get(userId);
+        if (state != null && state.equals(MyWorldStates.description_requested)) {
+            return new MyWorldHideContactResponseFactory(update);
+        }
+
+        return null;
+    }
+
+    private ResponseFactory getResponse(Message message) {
+        Integer userId = message.getFrom().getId();
 
         MyWorldStates state = AliasMapManager.myWorldStatesMap.get(userId);
         if (state != null && state.equals(MyWorldStates.contact_sent)) {
             return new MyWorldDescriptionResponseFactory(update);
-        } else if (state != null && state.equals(MyWorldStates.description_requested)) {
-            return new MyWorldHideContactResponseFactory(update);
-        }
+        } else
 
-        log.info("text/smile - [id" + msg.getFrom().getId() + ":" + msg.getFrom().getUserName() + ", " + msg.getFrom().getFirstName() + " " + msg.getFrom().getLastName() + "]::[" + msg.getText() + "]");
+            log.info("text/smile - [id" + userId + ":" + message.getFrom().getUserName() + ", " + message.getFrom().getFirstName() + " " + message.getFrom().getLastName() + "]::[" + message.getText() + "]");
         return null;
     }
 
@@ -151,5 +180,13 @@ public class BotFactory {
 
         ResponseMessage rm = new ResponseMessage();
         return (T) rm.fillMessage(update.getMessage(), "Nice pic \uD83C\uDF04");
+    }
+
+    private boolean isStaticButton(String command){
+        List<String> buttons = Arrays.asList(YoLookAroundCommand.alias,
+                InfoCommand.alias,
+                MyWorldCommand.alias,
+                MyWorldSetCommand.alias);
+        return buttons.contains(command);
     }
 }

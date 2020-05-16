@@ -35,11 +35,11 @@ public class YoLocationCommand implements Command {
         if (res > 0) {
             AliasMapManager.yoStatesMap.put(senderId, YoStates.set_location);
             response = nearbyCheck(senderId, lat, lon);
-            return (T) rm.fillMessage(update.getMessage(), response);
+            return (T) rm.fillMessage(update.getMessage(), response, true);
         } else {
             response = "Hmm.. Looks like some problem\nTry again by /yo command";
             AliasMapManager.yoStatesMap.remove(senderId);
-            return (T) rm.fillMessage(update.getMessage(), response);
+            return (T) rm.fillMessage(update.getMessage(), response, true);
         }
     }
 

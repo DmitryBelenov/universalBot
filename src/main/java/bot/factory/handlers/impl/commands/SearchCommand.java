@@ -59,7 +59,7 @@ public class SearchCommand implements Command {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), result);
+        return (T) rm.fillMessage(update.getMessage(), result, true);
     }
 
     @Override

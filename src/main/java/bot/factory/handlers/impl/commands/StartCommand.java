@@ -2,24 +2,25 @@ package bot.factory.handlers.impl.commands;
 
 import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.interfaces.Command;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-public class InfoCommand implements Command {
+public class StartCommand implements Command {
 
-    public static final String alias = "/info";
+    public static final String alias = "/start";
     private Update update;
 
-    InfoCommand(Update update) {
+    StartCommand(Update update) {
         this.update = update;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        String txt = "Universal Bot\uD83E\uDD16\n\nCreated by: Belenov Dmitry\ndmitrij_belenov@mail.ru\nhttps://t.me/booleanJ";
+        Message message = update.getMessage();
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getCallbackQuery().getMessage(), txt, true);
+        return (T) rm.fillMessage(message, "Hi!\uD83D\uDE03\nHere link to quick intro video\nhttps://yadi.sk/i/VbndJaGMCJz8ew\nUse buttons below to begin", true);
     }
 
     @Override

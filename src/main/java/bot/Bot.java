@@ -9,9 +9,12 @@ import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.List;
+
 public class Bot extends TelegramLongPollingBot {
 
     private static Logger log = Logger.getLogger(Bot.class);
+    private static boolean process = false;
 
     Bot(DefaultBotOptions botOptions) {
         super(botOptions);
@@ -19,14 +22,18 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        Thread th = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                BotFactory factory = new BotFactory(update);
-                sendResponse(factory.getResponse());
-            }
-        });
-        th.start();
+        if (!process) {
+            process = true;
+            Thread th = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    BotFactory factory = new BotFactory(update);
+                    sendResponse(factory.getResponse());
+                    process = false;
+                }
+            });
+            th.start();
+        }
     }
 
     @Override
@@ -39,7 +46,19 @@ public class Bot extends TelegramLongPollingBot {
         return BotProperties.get().getProperty("bot.token");
     }
 
+    @SuppressWarnings("unchecked")
     private synchronized <T> void sendResponse(T t) {
+        if (t instanceof List){
+           List<T> list = (List<T>) t;
+           for (T method : list){
+               response(method);
+           }
+        } else {
+            response(t);
+        }
+    }
+
+    private <T> void response(T t){
         if (t instanceof SendMessage) {
             SendMessage s =(SendMessage) t;
             try {
@@ -99,7 +118,12 @@ public class Bot extends TelegramLongPollingBot {
         } else if (t instanceof SendVenue) {
 
         } else if (t instanceof SendVideo) {
-
+            SendVideo video = (SendVideo) t;
+            try {
+                execute(video);
+            } catch (TelegramApiException e) {
+                log.error("Unable to execute method Send Video\n"+e);
+            }
         } else if (t instanceof SendVideoNote) {
 
         } else if (t instanceof SendVoice) {

@@ -19,14 +19,13 @@ public class YoLookAroundCommand implements Command {
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
         String response;
-
-        Message message = update.getMessage();
-        Integer senderId = message.getFrom().getId();
+        Message message = update.getCallbackQuery().getMessage();
+        Integer senderId = update.getCallbackQuery().getFrom().getId();
 
         response = nearbyCheck(senderId);
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), response);
+        return (T) rm.fillMessage(message, response, true);
     }
 
     @Override
