@@ -1,4 +1,4 @@
-package bot.factory.handlers.impl.commands;
+package bot.factory.handlers.impl.responses;
 
 import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.impl.AliasMapManager;

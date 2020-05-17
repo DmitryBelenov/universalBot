@@ -1,6 +1,5 @@
 package bot.factory.handlers;
 
-import com.google.common.base.Strings;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -18,6 +17,7 @@ public class ResponseMessage {
         SendMessage message = new SendMessage();
         message.setChatId(msg.getChatId());
         message.setText(text);
+
         return message;
     }
 
@@ -27,6 +27,7 @@ public class ResponseMessage {
             message.setChatId(msg.getChatId());
             message.setText(text);
             message.setReplyMarkup(keyboard());
+
             return message;
         } else return fillMessage(msg, text);
     }
@@ -36,6 +37,7 @@ public class ResponseMessage {
         message.setChatId(msg.getChatId());
         message.setText(text);
         message.setReplyMarkup(keyboard);
+
         return message;
     }
 

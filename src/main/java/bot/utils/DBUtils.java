@@ -489,4 +489,37 @@ public class DBUtils {
 
         return worlds;
     }
+
+    public void storeMessage(String chatId, Integer messageId){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("INSERT INTO chat_stack (event_id, chat_id, message_id) " +
+                    "VALUES ('" + UUID.randomUUID().toString() + "','" + chatId + "'," + messageId + ")");
+        } catch (SQLException e) {
+            log.error("Ошибка создания записи chat stack: " + e);
+        }
+    }
+
+    public List<Integer> msgList(String chatId){
+        ArrayList<Integer> msgToRemove = new ArrayList<>();
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("select message_id from chat_stack where chat_id='"+chatId+"'");
+            while (rs.next()) {
+                msgToRemove.add(rs.getInt("message_id"));
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения записей chat stack: " + e);
+        }
+        return msgToRemove;
+    }
+
+    public void cleanMsgList(String chatId){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("delete from chat_stack where chat_id='"+chatId+"'");
+        } catch (SQLException e) {
+            log.error("Ошибка удаления записей chat stack: " + e);
+        }
+    }
 }

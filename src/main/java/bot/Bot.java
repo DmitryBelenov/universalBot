@@ -2,10 +2,15 @@ package bot;
 
 import bot.factory.BotFactory;
 import bot.property.BotProperties;
+import bot.utils.DBUtils;
 import org.apache.log4j.Logger;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
 import org.telegram.telegrambots.meta.api.methods.send.*;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.objects.Chat;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -14,7 +19,6 @@ import java.util.List;
 public class Bot extends TelegramLongPollingBot {
 
     private static Logger log = Logger.getLogger(Bot.class);
-    private static boolean process = false;
 
     Bot(DefaultBotOptions botOptions) {
         super(botOptions);
@@ -22,18 +26,13 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (!process) {
-            process = true;
-            Thread th = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    BotFactory factory = new BotFactory(update);
-                    sendResponse(factory.getResponse());
-                    process = false;
-                }
+            Thread th = new Thread(() -> {
+                BotFactory factory = new BotFactory(update);
+                Object response = factory.getResponse();
+                if (response != null)
+                    sendResponse(response);
             });
             th.start();
-        }
     }
 
     @Override
@@ -51,32 +50,41 @@ public class Bot extends TelegramLongPollingBot {
         if (t instanceof List){
            List<T> list = (List<T>) t;
            for (T method : list){
-               response(method);
+               response(method, true);
            }
         } else {
-            response(t);
+            response(t, false);
         }
     }
 
-    private <T> void response(T t){
+    private synchronized <T> void response(T t, boolean group){
         if (t instanceof SendMessage) {
             SendMessage s =(SendMessage) t;
+            String chatId = ((SendMessage) t).getChatId();
+            if (!group) {
+                try {
+                    cleanStack(chatId);
+                } catch (Exception e) {
+                    log.error("Unable to clean chat stack\n" + e);
+                }
+            }
             try {
-                execute(s);
+                Message message = execute(s);
+                storeMsg(chatId, message.getMessageId());
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Message\n"+e);
             }
         } else if (t instanceof SendAnimation) {
             SendAnimation animation = (SendAnimation) t;
             try {
-                execute(animation);
+                Message message = execute(animation);
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Animation\n"+e);
             }
         } else if (t instanceof SendAudio) {
             SendAudio audio = (SendAudio) t;
             try {
-                execute(audio);
+                Message message = execute(audio);
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Audio\n"+e);
             }
@@ -85,7 +93,7 @@ public class Bot extends TelegramLongPollingBot {
         } else if (t instanceof SendContact) {
             SendContact contact = (SendContact) t;
             try {
-                execute(contact);
+                Message message = execute(contact);
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Contact\n"+e);
             }
@@ -101,15 +109,24 @@ public class Bot extends TelegramLongPollingBot {
 
         } else if (t instanceof SendMediaGroup) {
             SendMediaGroup mediaGroup = (SendMediaGroup) t;
+            String chatId = mediaGroup.getChatId();
             try {
-                execute(mediaGroup);
+                cleanStack(chatId);
+            } catch (Exception e){
+                log.error("Unable to clean chat stack\n"+e);
+            }
+            try {
+                List<Message> messages = execute(mediaGroup);
+                for (Message m : messages){
+                    storeMsg(chatId, m.getMessageId());
+                }
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Media Group\n"+e);
             }
         }  else if (t instanceof SendPhoto) {
             SendPhoto photo = (SendPhoto) t;
             try {
-                execute(photo);
+                Message message = execute(photo);
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Photo\n"+e);
             }
@@ -120,7 +137,7 @@ public class Bot extends TelegramLongPollingBot {
         } else if (t instanceof SendVideo) {
             SendVideo video = (SendVideo) t;
             try {
-                execute(video);
+                Message message = execute(video);
             } catch (TelegramApiException e) {
                 log.error("Unable to execute method Send Video\n"+e);
             }
@@ -128,6 +145,40 @@ public class Bot extends TelegramLongPollingBot {
 
         } else if (t instanceof SendVoice) {
 
+        }  else if (t instanceof PinChatMessage) {
+            PinChatMessage pin = (PinChatMessage) t;
+            try {
+                boolean execute = execute(pin);
+            } catch (TelegramApiException e) {
+                log.error("Unable to execute method Pin Chat Message\n"+e);
+            }
         }
+    }
+
+    private void cleanStack(String chatId){
+        DBUtils db = new DBUtils();
+        List<Integer> removeList = db.msgList(chatId);
+
+        if (removeList.size() > 0){
+            for (Integer id : removeList) {
+                DeleteMessage deleteMessage = new DeleteMessage();
+                deleteMessage.setChatId(chatId);
+                deleteMessage.setMessageId(id);
+                try {
+                    execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    log.warn("Unable to execute method Delete Message\n"+e);
+                }
+            }
+        }
+
+        db.cleanMsgList(chatId);
+        db.connectionClose();
+    }
+
+    private void storeMsg(String chatId, Integer messageId){
+        DBUtils db = new DBUtils();
+        db.storeMessage(chatId, messageId);
+        db.connectionClose();
     }
 }

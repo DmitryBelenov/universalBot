@@ -5,6 +5,8 @@ import bot.factory.handlers.impl.AliasMapManager;
 import bot.factory.handlers.impl.MyWorldStates;
 import bot.factory.handlers.impl.YoStates;
 import bot.factory.handlers.impl.commands.*;
+import bot.factory.handlers.impl.responses.MyWorldDescriptionResponseFactory;
+import bot.factory.handlers.impl.responses.MyWorldHideContactResponseFactory;
 import bot.factory.handlers.interfaces.Command;
 import bot.factory.handlers.interfaces.CommandFactory;
 import bot.factory.handlers.interfaces.Response;
@@ -18,7 +20,7 @@ import java.util.List;
 
 public class BotFactory {
 
-    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location 📱 - iphone 📷 - camera 🌄 - mountains pic 👤 - contact 🤖 - bot
+    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location 📱 - iphone 📷 - camera 🌄 - mountains pic 👤 - contact 🤖 - bot 🚫 - block it ❗️ - warning
 
     private static Logger log = Logger.getLogger(BotFactory.class);
 
@@ -80,6 +82,7 @@ public class BotFactory {
                 }
             }
         }
+
         return null;
     }
 
@@ -100,6 +103,8 @@ public class BotFactory {
             return new MyWorldSetCommandFactory(update);
         } else if (text.equals(StartCommand.alias)) {
             return new StartCommandFactory(update);
+        } else if (text.equals(ButtonsCommand.alias)) {
+            return new ButtonsCommandFactory(update);
         }
         return null;
     }
@@ -145,7 +150,7 @@ public class BotFactory {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "Ok, I'll send pizza to this location:)\uD83C\uDF55");
+        return (T) rm.fillMessage(update.getMessage(), "Ok, I'll send pizza to this location:)\uD83C\uDF55", true);
     }
 
     @SuppressWarnings("unchecked")
@@ -166,7 +171,7 @@ public class BotFactory {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "You want me to call " + contact.getFirstName() + "?\uD83D\uDE03");
+        return (T) rm.fillMessage(update.getMessage(), "You want me to call " + contact.getFirstName() + "?\uD83D\uDE03", true);
     }
 
     @SuppressWarnings("unchecked")
@@ -179,10 +184,10 @@ public class BotFactory {
         }
 
         ResponseMessage rm = new ResponseMessage();
-        return (T) rm.fillMessage(update.getMessage(), "Nice pic \uD83C\uDF04");
+        return (T) rm.fillMessage(update.getMessage(), "Nice pic \uD83C\uDF04", true);
     }
 
-    private boolean isStaticButton(String command){
+    private boolean isStaticButton(String command) {
         List<String> buttons = Arrays.asList(YoLookAroundCommand.alias,
                 InfoCommand.alias,
                 MyWorldCommand.alias,
