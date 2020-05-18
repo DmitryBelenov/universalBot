@@ -142,7 +142,21 @@ public class Bot extends TelegramLongPollingBot {
                 log.error("Unable to execute method Send Video\n"+e);
             }
         } else if (t instanceof SendVideoNote) {
-
+            String chatId = ((SendVideoNote) t).getChatId();
+            if (!group) {
+                try {
+                    cleanStack(chatId);
+                } catch (Exception e) {
+                    log.error("Unable to clean chat stack\n" + e);
+                }
+            }
+            SendVideoNote videoNote = (SendVideoNote) t;
+            try {
+                Message message = execute(videoNote);
+//                storeMsg(chatId, message.getMessageId());
+            } catch (TelegramApiException e) {
+                log.error("Unable to execute method Send Video Note\n"+e);
+            }
         } else if (t instanceof SendVoice) {
 
         }  else if (t instanceof PinChatMessage) {

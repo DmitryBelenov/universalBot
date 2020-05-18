@@ -1,5 +1,6 @@
 package bot.factory.handlers;
 
+import bot.factory.handlers.impl.commands.*;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -47,25 +48,24 @@ public class ResponseMessage {
         // первый ряд кнопок
         List<InlineKeyboardButton> keyboardButtonsRow1 = new ArrayList<>();
         keyboardButtonsRow1.add(new InlineKeyboardButton().setText("YO!")
-                .setCallbackData("/yo"));
+                .setCallbackData(YoLookAroundCommand.alias));
         keyboardButtonsRow1.add(new InlineKeyboardButton().setText("INFO")
-                .setCallbackData("/info"));
+                .setCallbackData(InfoCommand.alias));
         keyboardButtonsRow1.add(new InlineKeyboardButton().setText("MW")
-                .setCallbackData("/my_world"));
+                .setCallbackData(MyWorldCommand.alias));
         keyboardButtonsRow1.add(new InlineKeyboardButton().setText("SET MW")
-                .setCallbackData("/set_my_world"));
+                .setCallbackData(MyWorldSetCommand.alias));
 
         // второй ряд кнопок
-//        List<InlineKeyboardButton> keyboardButtonsRow2 = new ArrayList<>();
-//        keyboardButtonsRow2.add(new InlineKeyboardButton().setText("MY WORLD")
-//                .setCallbackData("/my_world"));
-//        keyboardButtonsRow2.add(new InlineKeyboardButton().setText("SET MW")
-//                .setCallbackData("/set_my_world"));
-
+        List<InlineKeyboardButton> keyboardButtonsRow2 = new ArrayList<>();
+        keyboardButtonsRow2.add(new InlineKeyboardButton().setText("V NOTES")
+                .setCallbackData(VideoNotesCommand.alias));
+        keyboardButtonsRow2.add(new InlineKeyboardButton().setText("SET V NOTE")
+                .setCallbackData(VideoNoteSetRequestCommand.alias));
 
         List<List<InlineKeyboardButton>> rowList= new ArrayList<>();
         rowList.add(keyboardButtonsRow1);
-//        rowList.add(keyboardButtonsRow2);
+        rowList.add(keyboardButtonsRow2);
 
         inlineKeyboardMarkup.setKeyboard(rowList);
 

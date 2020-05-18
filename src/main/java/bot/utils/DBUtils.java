@@ -3,8 +3,10 @@ package bot.utils;
 import bot.factory.handlers.impl.AliasMapManager;
 import bot.property.BotProperties;
 import org.apache.log4j.Logger;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideoNote;
 import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -197,7 +199,7 @@ public class DBUtils {
                     double lat2 = rs.getDouble("user_latitude");
                     double lon2 = rs.getDouble("user_longitude");
 
-                    double distance = calculateDistance(lat1, lon1, lat2, lon2, 'K'); // пример расчета = 0.2741365941750706
+                    double distance = calculateDistance(lat1, lon1, lat2, lon2, 'K');
                     if (distance < 2.0) {
                         String dis;
                         String type;
@@ -349,12 +351,12 @@ public class DBUtils {
         ArrayList<Integer> idsToRemove = new ArrayList<>();
         try {
             Statement s = connection.createStatement();
-            ResultSet rs = s.executeQuery("select user_id from my_world where (register_date + INTERVAL '1 HOUR') < NOW()");
+            ResultSet rs = s.executeQuery("select user_id from my_world where (register_date + INTERVAL '50 MINUTES') < NOW()");
             while (rs.next()) {
                 idsToRemove.add(rs.getInt("user_id"));
             }
         } catch (SQLException e) {
-            log.error("Ошибка получения просроченных YO записей: " + e);
+            log.error("Ошибка получения просроченных My World записей: " + e);
             return false;
         }
 
@@ -374,6 +376,41 @@ public class DBUtils {
                 s.executeUpdate(q);
             } catch (SQLException e) {
                 log.error("Ошибка удаления просроченных записей My World: " + e);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    boolean checkVideNotesDataCleaner() {
+        ArrayList<Integer> idsToRemove = new ArrayList<>();
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("select user_id from video_note where (register_date + INTERVAL '50 MINUTES') < NOW()");
+            while (rs.next()) {
+                idsToRemove.add(rs.getInt("user_id"));
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения просроченных Video Note записей: " + e);
+            return false;
+        }
+
+        if (idsToRemove.size() > 0) {
+            String sqlQuery = "delete from video_note where user_id in (%s)";
+            StringBuilder ids = new StringBuilder();
+            int i = 0;
+            for (Integer id : idsToRemove) {
+                ids.append(id).append(i == idsToRemove.size() - 1 ? "" : ",");
+                AliasMapManager.myWorldStatesMap.remove(id);
+                i++;
+            }
+            String q = String.format(sqlQuery, ids.toString());
+
+            try {
+                Statement s = connection.createStatement();
+                s.executeUpdate(q);
+            } catch (SQLException e) {
+                log.error("Ошибка удаления просроченных записей Video Note: " + e);
                 return false;
             }
         }
@@ -407,16 +444,58 @@ public class DBUtils {
             return -2;
         }
 
-        return count <= 100 ? 1 : 0;
+        return count < 10 ? 1 : 0;  // 100?
+    }
+
+    public int checkVideoNotesAvailability(Integer userId){
+        int res = -2;
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM video_note where user_id="+userId);
+            if (rs.next()){
+                res = -1;
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения записей пользователя Video Note: " + e);
+            return res;
+        }
+
+        if (res == -1) return res;
+
+        int count = 0;
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT COUNT(*) AS total FROM video_note");
+            if (rs.next()){
+                count = rs.getInt("total");
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения количества записей Video Note: " + e);
+            return -2;
+        }
+
+        return count < 10 ? 1 : 0;  // 100?
     }
 
     public int createMyWorld(Integer userId, String picId){
         try {
             Statement s = connection.createStatement();
             s.executeUpdate("INSERT INTO my_world (register_id, user_id, user_pic_id, register_date, hide_contact) " +
-                    "VALUES ('" + UUID.randomUUID().toString() + "','" + userId + "','" + picId + "', current_timestamp, false)");
+                    "VALUES ('" + UUID.randomUUID().toString() + "'," + userId + ",'" + picId + "', current_timestamp, false)");
         } catch (SQLException e) {
             log.error("Ошибка создания записи My World: " + e);
+            return -1;
+        }
+        return 1;
+    }
+
+    public int createVideoNote(Integer userId, String noteId){
+        try {
+            Statement s = connection.createStatement();
+            s.executeUpdate("INSERT INTO video_note (register_id, user_id, user_vn_id, register_date) " +
+                    "VALUES ('" + UUID.randomUUID().toString() + "'," + userId + ",'" + noteId + "', current_timestamp)");
+        } catch (SQLException e) {
+            log.error("Ошибка создания записи Video Note: " + e);
             return -1;
         }
         return 1;
@@ -490,11 +569,33 @@ public class DBUtils {
         return worlds;
     }
 
+    public List<SendVideoNote> getVideoNotes(Long chatId){
+        List<SendVideoNote> vNotes = new ArrayList<>();
+
+        try {
+            Statement s = connection.createStatement();
+            ResultSet rs = s.executeQuery("SELECT user_vn_id FROM video_note order by register_date");
+            while (rs.next()){
+                SendVideoNote video = new SendVideoNote();
+
+                String noteId = rs.getString("user_vn_id");
+                video.setVideoNote(noteId);
+                video.setChatId(chatId);
+
+                vNotes.add(video);
+            }
+        } catch (SQLException e) {
+            log.error("Ошибка получения данных Video Note: " + e);
+        }
+
+        return vNotes;
+    }
+
     public void storeMessage(String chatId, Integer messageId){
         try {
             Statement s = connection.createStatement();
-            s.executeUpdate("INSERT INTO chat_stack (event_id, chat_id, message_id) " +
-                    "VALUES ('" + UUID.randomUUID().toString() + "','" + chatId + "'," + messageId + ")");
+            s.executeUpdate("INSERT INTO chat_stack (event_id, chat_id, message_id, register_date) " +
+                    "VALUES ('" + UUID.randomUUID().toString() + "','" + chatId + "'," + messageId + ", current_timestamp)");
         } catch (SQLException e) {
             log.error("Ошибка создания записи chat stack: " + e);
         }

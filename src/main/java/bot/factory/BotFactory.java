@@ -3,6 +3,7 @@ package bot.factory;
 import bot.factory.handlers.ResponseMessage;
 import bot.factory.handlers.impl.AliasMapManager;
 import bot.factory.handlers.impl.MyWorldStates;
+import bot.factory.handlers.impl.VNoteStates;
 import bot.factory.handlers.impl.YoStates;
 import bot.factory.handlers.impl.commands.*;
 import bot.factory.handlers.impl.responses.MyWorldDescriptionResponseFactory;
@@ -20,7 +21,8 @@ import java.util.List;
 
 public class BotFactory {
 
-    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location 📱 - iphone 📷 - camera 🌄 - mountains pic 👤 - contact 🤖 - bot 🚫 - block it ❗️ - warning
+    // 😊 - smile 😃 - laugh 🍕 - pizza 📍 - location 📱 - iphone 📷 - camera 🌄 - mountains pic
+    // 👤 - contact 🤖 - bot 🚫 - block it ❗️ - warning 👥 - contacts 🎥 - video cam 👍 - like
 
     private static Logger log = Logger.getLogger(BotFactory.class);
 
@@ -65,6 +67,12 @@ public class BotFactory {
             if (photos != null) {
                 return handlePicture(msg.getFrom().getId());
             }
+
+            VideoNote vNote = msg.getVideoNote();
+            if (vNote != null){
+                return handleVideoNote(msg.getFrom().getId());
+            }
+
         } else if (update.hasCallbackQuery()) {
             CallbackQuery cb = update.getCallbackQuery();
             String data = cb.getData();
@@ -105,6 +113,10 @@ public class BotFactory {
             return new StartCommandFactory(update);
         } else if (text.equals(ButtonsCommand.alias)) {
             return new ButtonsCommandFactory(update);
+        } else if (text.equals(VideoNoteSetRequestCommand.alias)) {
+            return new VideoNoteSetRequestCommandFactory(update);
+        } else if (text.equals(VideoNotesCommand.alias)) {
+            return new VideoNotesCommandFactory(update);
         }
         return null;
     }
@@ -187,11 +199,26 @@ public class BotFactory {
         return (T) rm.fillMessage(update.getMessage(), "Nice pic \uD83C\uDF04", true);
     }
 
+    @SuppressWarnings("unchecked")
+    private <T> T handleVideoNote(Integer userId) {
+        VNoteStates vNoteState = AliasMapManager.videoNoteStatesMap.get(userId);
+        if (vNoteState != null && vNoteState.equals(VNoteStates.vnote_set_requested)){
+            CommandFactory commandFactory = new VideoNoteCreateCommandFactory(update);
+            Command command = commandFactory.getFactory();
+            return command.invoke();
+        }
+
+        ResponseMessage rm = new ResponseMessage();
+        return (T) rm.fillMessage(update.getMessage(), "Nice video \uD83C\uDFA5", true);
+    }
+
     private boolean isStaticButton(String command) {
         List<String> buttons = Arrays.asList(YoLookAroundCommand.alias,
                 InfoCommand.alias,
                 MyWorldCommand.alias,
-                MyWorldSetCommand.alias);
+                MyWorldSetCommand.alias,
+                VideoNoteSetRequestCommand.alias,
+                VideoNotesCommand.alias);
         return buttons.contains(command);
     }
 }

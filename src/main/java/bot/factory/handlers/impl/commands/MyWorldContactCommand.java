@@ -20,7 +20,7 @@ public class MyWorldContactCommand implements Command {
     @Override
     @SuppressWarnings("unchecked")
     public <T> T invoke() {
-        String response = "Nope) Send me YOUR contact\nStart over with the /set_my_world command";
+        String response = "Nope) Send me YOUR contact\nStart over with the 'SET MV' button";
 
         Message message = update.getMessage();
         Contact contact = message.getContact();

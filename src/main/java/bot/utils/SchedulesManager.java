@@ -17,6 +17,7 @@ public class SchedulesManager {
     public void init(){
         initYoDataCleaner();
         initMyWorldCleaner();
+        initVideoNoteCleaner();
     }
 
     private void initYoDataCleaner() {
@@ -51,6 +52,24 @@ public class SchedulesManager {
                 check.get();
             } catch (Exception e) {
                 log.error("Expired My World task error:" + e);
+            }
+        }, 0, 2, TimeUnit.MINUTES);
+    }
+
+    private void initVideoNoteCleaner() {
+        final ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
+        ses.scheduleWithFixedDelay(() -> {
+            CompletableFuture<Void> check = CompletableFuture.runAsync(() ->
+            {
+                DBUtils dbUtils = new DBUtils();
+                boolean success = dbUtils.checkMyWorldDataCleaner();
+                if (!success) log.error("Expired Video Note task error");
+                dbUtils.connectionClose();
+            });
+            try {
+                check.get();
+            } catch (Exception e) {
+                log.error("Expired Video Note task error:" + e);
             }
         }, 0, 2, TimeUnit.MINUTES);
     }
